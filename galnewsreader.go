@@ -1,3 +1,21 @@
+/*
+    GalNewsReader - a pseudo news reader for Frontier's Elite:Dangerous Galnews website
+    Copyright (C) 2014  Sammy Fischer
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
@@ -55,8 +73,6 @@ func main() {
 
 	fmt.Println("GALNET News")
 
-	fmt.Println("item requested : "+strconv.Itoa(request))
-	
 	if request < 0 {
 		fmt.Println("This article does not exist.")
 		return
@@ -75,13 +91,15 @@ func main() {
 
 	htm := string(buf)
 
-	if request != 0 {		
+	if request != 0 {
+		fmt.Println("item requested : "+strconv.Itoa(request))	
 		fmt.Println(getArticle(request, htm))		
 	} else {
+		fmt.Println("Current Headlines : \n\n")	
 		headlines := getHeadlines(htm)
 		for i:=1; i<len(headlines); i++ {
 			galDate := getLinkDate(headlines[i])
-			fmt.Println(strconv.Itoa(i)+".\nStardate "+galDate+".\n"+removeTags(headlines[i]))
+			fmt.Println("Headline "+strconv.Itoa(i)+".\nStardate "+galDate+".\n"+removeTags(headlines[i])+"\n")
 		}
 	}
 }
