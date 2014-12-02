@@ -21,7 +21,8 @@ Description:
  Small GO Program allowing to read the headlines from Frontier's Elite:Dangerous GalNews
  page or single article summaries. The idea is to have Windows TextToSpeech Engine read
  the news aloud while flying.
- A small powershell script to "say" a string is included
+ A small powershell script to "say" a string is included but there doesn't seem to be any
+ way to call it without windows taking focus from E:D and dropping to the desktop.
 
 License:
  why GPL3? why *NOT*????
