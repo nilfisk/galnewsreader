@@ -17,7 +17,6 @@
 
 
 Description:
-
  Small GO Program allowing to read the headlines from Frontier's Elite:Dangerous GalNews
  page or single article summaries. The idea is to have Windows TextToSpeech Engine read
  the news aloud while flying.
@@ -27,10 +26,16 @@ Description:
 License:
  why GPL3? why *NOT*????
 
-Useage:
+How to compile for Windows:
+in order to disable the console window which pops up in Windows when the reader is started, you need to compile it with:
+
+         go build -ldflags -H=windowsgui galnewsreader.go
+
+Usage:
  galnewsreader [-item=n]
  if -item is specified, only the corresponding summary 'n' will be printed out. If it is not
  specified or n equals 0 only the headlines will be printed out.
  Plans to be able to get a complete article are there, but right now I just want to play E:D
- 
+ Using Voice Attack and Luca D's excellent plugin (https://groups.google.com/forum/#!topic/voiceattack/VotudmB84hE) 
+ is highly recommended. Use the readConsole example from the plugin's sample profile as template.
 
