@@ -29,7 +29,7 @@ import (
 	"os"
 	)
 
-const VERSION = "1.1"
+const VERSION = "1.2"
 
 func itemRequested() int {
 	item := flag.Int("item",0,"headline number for summary, negative headline number for body, 0 for a list of headlines")
@@ -57,7 +57,7 @@ func getLinkDate(htm string) string {
 func getHeadlines(htm string) []string {
 	htm = strings.Replace(htm,"View full transmission &raquo;","",-1)
 	re := regexp.MustCompile("<h3>(.*?)</h3>")
-	headlines := re.FindAllString(htm, 10)
+	headlines := re.FindAllString(htm, -1)
 	return headlines
 }
 
@@ -83,7 +83,7 @@ func getDetails(nr int, htm string) string {
 	if nr < 1 {
 		return "This article does not exist."
 	}
-	article := articlesRaw[nr]
+	article := articlesRaw[nr-1]
 	re := regexp.MustCompile("news/galnet/\\d{4}-\\d{2}-\\d{2}")
 	link := "http://www.elitedangerous.com/"+re.FindString(article)
 	details := retrieveURL(link)
@@ -92,7 +92,9 @@ func getDetails(nr int, htm string) string {
 	body = strings.Replace(body,"&laquo; GalNet Alert Service","",-1)
 	body = strings.Replace(body,"<blockquote>","\n\nQuote:\n\n",-1)
 	body = strings.Replace(body,"</blockquote>","\n\nEnd Quote\n\n",-1)
-	body = strings.Replace(body,"<h3>","\n\n\n",-1)
+	body = strings.Replace(body,"<h3>","\n",-1)
+	body = strings.Replace(body,"transmisSion","transmission",-1)
+	body = strings.Replace(body,"::","",-1)
 	re = regexp.MustCompile("<figure>.*?</figure>")
 	body = re.ReplaceAllLiteralString(body, "")
 	
@@ -100,17 +102,22 @@ func getDetails(nr int, htm string) string {
 	return body	
 }
 
+func outputToFile( s string) {
+	b := []byte(s)
+	ioutil.WriteFile("./galnews", b, 0777)
+}
+
 func retrieveURL( url string) string {
 	resp,err1 := http.Get(url)
 	if err1 != nil {
-		fmt.Println("this page could not be retrieved.")
+		outputToFile("this page could not be retrieved.")
 		fmt.Println(err1)
 		os.Exit(0)
 	}
 	bodyio := resp.Body
 	buf, err2 := ioutil.ReadAll(bodyio)
 	if err2 != nil {
-		fmt.Println("this page could not be retrieved.")
+		outputToFile("this page could not be retrieved.")
 		fmt.Println(err2)
 		os.Exit(0)
 	}
@@ -120,8 +127,8 @@ func retrieveURL( url string) string {
 func main() {
 	request := itemRequested()
 	details := 0
-	
-	fmt.Println("GALNET News")
+
+	rs :="GALNET News.\n"
 
 	if request < 0 {
 		request = -request
@@ -132,19 +139,22 @@ func main() {
 
 	if request != 0 {
 		if details == 0 {
-			fmt.Println("item requested : "+strconv.Itoa(request))	
-			fmt.Println(getArticle(request, htm))
+			rs = rs + "item requested : "+strconv.Itoa(request)+"\n"
+			rs = rs + getArticle(request, htm)
 		} else {
-			fmt.Println("full content of item : "+strconv.Itoa(request))	
-			fmt.Println(getDetails(request, htm))
+			rs = rs + "full content of item : "+strconv.Itoa(request)+"\n"
+			rs = rs + getDetails(request, htm)
 		}
 	} else {
-		fmt.Println("Current Headlines : \n\n")	
+		rs = rs + "Current Headlines : \n\n"
 		headlines := getHeadlines(htm)
-		for i:=1; i<len(headlines); i++ {
+		for i:=0; i<len(headlines); i++ {
 			galDate := getLinkDate(headlines[i])
-			fmt.Println("Headline "+strconv.Itoa(i)+".\nStardate "+galDate+".\n"+removeTags(headlines[i])+"\n")
+			rs = rs + "Headline "+strconv.Itoa(i+1)+".\nStardate "+galDate+".\n"+removeTags(headlines[i])+"\n"
 		}
 	}
+	rs = rs + "\nEnd of Stream.\n"
+	outputToFile(rs)
+	fmt.Println(rs)
 }
 	

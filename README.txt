@@ -15,7 +15,16 @@ GalNewsReader - a pseudo news reader for Frontier's Elite:Dangerous Galnews webs
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Version: 1.1
+Version: 1.2
+
+Changelog :
+	  new:
+	  * the output is writen to a file ./galnews
+	  fixes:
+	  * the numbering between headlines and news was off
+	  * reduced the number of new lines.
+	  * fix for the weird spelling of "transmission"
+	  * fix for the weird :: in some headlines
 
 Description:
  Small GO Program allowing to read the headlines from Frontier's Elite:Dangerous GalNews
