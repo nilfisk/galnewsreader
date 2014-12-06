@@ -26,11 +26,19 @@ import (
 	"strconv"
 	"regexp"
 	"flag"
+	"os"
 	)
 
+const VERSION = "1.1"
+
 func itemRequested() int {
-	item := flag.Int("item",0,"headline number or -1 for a list of headlines")
+	item := flag.Int("item",0,"headline number for summary, negative headline number for body, 0 for a list of headlines")
+	version := flag.String("help","no","Show the version string")	
 	flag.Parse()
+	if *version != "no" {
+		fmt.Println("galnewsreader copyright 2014 Sammy Fischer\nVersion:"+VERSION+"\n\nhttp://github.com/sammyf/galnewsreader\n\nUseage : galnewsreader -item=n")
+		os.Exit(0)
+	}
 	return *item
 }
 
@@ -49,51 +57,87 @@ func getLinkDate(htm string) string {
 func getHeadlines(htm string) []string {
 	htm = strings.Replace(htm,"View full transmission &raquo;","",-1)
 	re := regexp.MustCompile("<h3>(.*?)</h3>")
-	headlines := re.FindAllString(htm, -1)
+	headlines := re.FindAllString(htm, 10)
 	return headlines
 }
 
-func getArticle(nr int, htm string) string {
-	htm = strings.Replace(htm,"View full transmission &raquo;","",-1)
-	htm = strings.Replace(htm,"<h3>", "News Item, Stardate ",-1)
-	htm = strings.Replace(htm,"<h3>", "Content : ",-1)
-
+func getArticle(nr int, htm string) string {	
 	articlesRaw := strings.Split(htm,"<article>")
-
 	if nr > len(articlesRaw) {
 		return "This article does not exist."
 	}
+	article := articlesRaw[nr]
+	article = strings.Replace(article,"View full transmission &raquo;","",-1)
+	article = strings.Replace(article,"<h3>", "Headline: ",-1)
+	article = strings.Replace(article,"<p class=\"small hiLite\">", "Star Date: ",-1)
 	
-	article := removeTags(articlesRaw[nr])	
+	article = removeTags(article)	
 	return article
 }
 
-func main() {
-	request := itemRequested()
-
-	fmt.Println("GALNET News")
-
-	if request < 0 {
-		fmt.Println("This article does not exist.")
-		return
+func getDetails(nr int, htm string) string {
+	articlesRaw := getHeadlines(htm)
+	if nr > len(articlesRaw) {
+		return "This article does not exist."
 	}
-	resp,err1 := http.Get("http://www.elitedangerous.com/news/galnet/")
+	if nr < 1 {
+		return "This article does not exist."
+	}
+	article := articlesRaw[nr]
+	re := regexp.MustCompile("news/galnet/\\d{4}-\\d{2}-\\d{2}")
+	link := "http://www.elitedangerous.com/"+re.FindString(article)
+	details := retrieveURL(link)
+	detailsBit := strings.Split(details, "<div class=\"widget-content alt2 galnet\">")
+	body := strings.Split(detailsBit[1], "<p><a href=\"/news/galnet/\">&laquo; GalNet Alert Service</a></p>")[0]
+	body = strings.Replace(body,"&laquo; GalNet Alert Service","",-1)
+	body = strings.Replace(body,"<blockquote>","\n\nQuote:\n\n",-1)
+	body = strings.Replace(body,"</blockquote>","\n\nEnd Quote\n\n",-1)
+	body = strings.Replace(body,"<h3>","\n\n\n",-1)
+	re = regexp.MustCompile("<figure>.*?</figure>")
+	body = re.ReplaceAllLiteralString(body, "")
+	
+	body = removeTags( body)
+	return body	
+}
+
+func retrieveURL( url string) string {
+	resp,err1 := http.Get(url)
 	if err1 != nil {
-		fmt.Println("ERROR 1")
-		fmt.Println(err1)		
+		fmt.Println("this page could not be retrieved.")
+		fmt.Println(err1)
+		os.Exit(0)
 	}
 	bodyio := resp.Body
 	buf, err2 := ioutil.ReadAll(bodyio)
 	if err2 != nil {
-		fmt.Println("ERROR 1")
-		fmt.Println(err2)		
+		fmt.Println("this page could not be retrieved.")
+		fmt.Println(err2)
+		os.Exit(0)
+	}
+	return string(buf)
+}
+
+func main() {
+	request := itemRequested()
+	details := 0
+	
+	fmt.Println("GALNET News")
+
+	if request < 0 {
+		request = -request
+		details = 1
 	}
 
-	htm := string(buf)
+	htm := retrieveURL("http://www.elitedangerous.com/news/galnet/")
 
 	if request != 0 {
-		fmt.Println("item requested : "+strconv.Itoa(request))	
-		fmt.Println(getArticle(request, htm))		
+		if details == 0 {
+			fmt.Println("item requested : "+strconv.Itoa(request))	
+			fmt.Println(getArticle(request, htm))
+		} else {
+			fmt.Println("full content of item : "+strconv.Itoa(request))	
+			fmt.Println(getDetails(request, htm))
+		}
 	} else {
 		fmt.Println("Current Headlines : \n\n")	
 		headlines := getHeadlines(htm)
