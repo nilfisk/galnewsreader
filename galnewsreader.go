@@ -30,7 +30,7 @@ import (
 	"html"
 	)
 
-const VERSION = "3.01"
+const VERSION = "3.02"
 
 /*
 	routines for Szokorad galnetarchive
@@ -75,6 +75,7 @@ func off_getArticles(htm string) []map[string]string {
 	months := map[string]string{"JAN":"0 1", "FEB":"0 2", "MAR":"0 3", "APR":"0 4", "MAY":"0 5", "JUN":"0 6", "JUL":"0 7", "AUG":"0 8", "SEP":"0 9", "OCT":"10", "NOV":"11", "DEC":"12"}
 	htm = strings.Replace(htm,"\n"," ",-1)
 	htm = strings.Replace(htm,"\r"," ",-1)
+	
 	re := regexp.MustCompile("div class=\"article\">(.+?)<div class=\"widget\">")
 	entries := re.FindAllStringSubmatch(htm, -1)
 	var articles = make([]map[string]string,0)
@@ -145,6 +146,10 @@ func itemRequested() (int,int) {
 func removeTags(htm string) string  {
 	re := regexp.MustCompile("<.*?>")
 	processed := re.ReplaceAllLiteralString(htm,"")
+	processed = strings.Replace(processed,"‘","'",-1)
+	processed = strings.Replace(processed,"’","'",-1)
+	processed = strings.Replace(processed,"“","\n\nQuote:\n",-1)
+	processed = strings.Replace(processed,"”","\nUnquote.\n\n",-1)
 	return processed
 }
 

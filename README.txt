@@ -14,10 +14,23 @@ GalNewsReader - a pseudo news reader for Frontier's Elite:Dangerous Galnews webs
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Version: 2.0
+Version: 3.2
 The source file should always be in the 7z archive! Please contact me if it is missing
+alternatively it can also be found at https://github.com/sammyf/galnewsreader, although small
+windows-specific changes might have been made which have not been commited yet.
 
 Changelog :
+    3.02
+	  fix:
+	  * replaced weird non-htmlentitied quotes with appropriate symbols
+	3.01
+	  fix:
+	  * modified the format of the stardate on the new official feed from
+	    DD LITERAL_MONTH YYYY to a purely numerical YYYY MM DD.
+	3.0
+	  new:
+	  * removed the code for the old frontier galnet news page
+	  * added the code for the (very badly formed) new galnet news page
 	2.0
 	  new:
 	  * added Szokorad's Galnet Archive as alternative feed
@@ -32,11 +45,6 @@ Changelog :
 	  * fix for the weird spelling of "transmission"
 	  * fix for the weird :: in some headlines
 
-For old users : 
-	As of Dec.24th Frontier seems to have taken down the Galnet News Page, so a new (default!) news feed has been added, namely Cmdr Szokorad galnetarchive which can be found at 
-		http://galnetarchive.blogspot.com/feeds/posts/default
-	Note that the parameters have been modified too!
- 	  
 Description:
  Small GO Program allowing to read the headlines from Frontier's Elite:Dangerous GalNews
  page or single article summaries. The idea is to have Windows TextToSpeech Engine read
@@ -55,14 +63,15 @@ in order to disable the console window which pops up in Windows when the reader 
 
 Usage:
  galnewsreader [-item=n] [-zok={0|1}]
- 
- if zok=1 (Default bevahiour) then the news from Szokorad's Galnet Archive will be used instead
- of Frontier's official page.
+
+
+ if zok=1 then the news from Szokorad's Galnet Archive will be used instead of Frontier's official
+ page. The official page should have the newer items, but the formating on Zok is much nicer.
  
  if -item is specified, only the corresponding summary 'n' will be printed out. If it is not
  specified or n equals 0 only the headlines will be printed out.
  For the Frontier Galnet News page :
-	if n is negative the full body of the transmission will be printed instead of the summary.
+	if n is negative the full body of all  transmissions on the page (20 items) will be printed.
  For Szokorad's Galnet Archive :
 	if n is negative the full text of the 100 first entries will be printed.
 
