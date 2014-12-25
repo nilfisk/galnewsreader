@@ -30,7 +30,7 @@ import (
 	"html"
 	)
 
-const VERSION = "2.0"
+const VERSION = "3.01"
 
 /*
 	routines for Szokorad galnetarchive
@@ -71,61 +71,38 @@ func zok_getArticles(htm string) []map[string]string {
 /*
 	routines for the official Frontier Galnet News page
 */
-
-
-func getLinkDate(htm string) string {
-	re := regexp.MustCompile("galnet/([\\d]{4}-[\\d]{2}-[\\d]{2})\">")
-	linkDate := re.FindStringSubmatch(htm)
-	return linkDate[1]
-}
-
-func getHeadlines(htm string) []string {
-	htm = strings.Replace(htm,"View full transmission &raquo;","",-1)
-	re := regexp.MustCompile("<h3>(.*?)</h3>")
-	headlines := re.FindAllString(htm, -1)
-	return headlines
-}
-
-func getArticle(nr int, htm string) string {	
-	articlesRaw := strings.Split(htm,"<article>")
-	if nr > len(articlesRaw) {
-		return "This article does not exist."
+func off_getArticles(htm string) []map[string]string {
+	months := map[string]string{"JAN":"0 1", "FEB":"0 2", "MAR":"0 3", "APR":"0 4", "MAY":"0 5", "JUN":"0 6", "JUL":"0 7", "AUG":"0 8", "SEP":"0 9", "OCT":"10", "NOV":"11", "DEC":"12"}
+	htm = strings.Replace(htm,"\n"," ",-1)
+	htm = strings.Replace(htm,"\r"," ",-1)
+	re := regexp.MustCompile("div class=\"article\">(.+?)<div class=\"widget\">")
+	entries := re.FindAllStringSubmatch(htm, -1)
+	var articles = make([]map[string]string,0)
+	if len(entries) <= 0 {
+		articles = append(articles, map[string]string{"headline":"no news to show","body":"The newsfeed seems to be currently unavailable"})
+		return articles
 	}
-	article := articlesRaw[nr]
-	article = strings.Replace(article,"View full transmission &raquo;","",-1)
-	article = strings.Replace(article,"<h3>", "Headline: ",-1)
-	article = strings.Replace(article,"<p class=\"small hiLite\">", "Star Date: ",-1)
-	
-	article = removeTags(article)	
-	return article
+	for i:=0; i<len(entries); i++ {
+		re = regexp.MustCompile("<div class=\"i_right\" style=\"margin: 5px\"><p class=\"small\" style=\"color:#888;\">(\\d{2}) ([A-Z]{3}) (\\d{4})</p></div>")
+		dateSubs := re.FindStringSubmatch(entries[i][1])
+		shorts := dateSubs[2]
+		date := dateSubs[3]+" "+months[shorts]+" "+dateSubs[1]		
+		re = regexp.MustCompile("read=([a-zA-Z0-9]+?)\">(.*?)</a>")
+		title := re.FindStringSubmatch(entries[i][1])[2]
+		headline := "stardate: "+date+".\n\n\n\nHeadline:\n"+title+"\n\n"
+		re := regexp.MustCompile("\\W")
+		tmp := re.ReplaceAllLiteralString(title,"\\W")
+		re = regexp.MustCompile(tmp+"</a></h3><p>(.*?)</div>")
+		raw := html.UnescapeString(re.FindStringSubmatch(entries[i][1])[1])
+		raw = strings.Replace(raw,"</p>", "\n\n",-1)
+		body := removeTags(raw)
+		article := map[string]string{"headline":headline,"body":body}
+		articles = append(articles, article)
+	}
+	return articles
 }
 
-func getDetails(nr int, htm string) string {
-	articlesRaw := getHeadlines(htm)
-	if nr > len(articlesRaw) {
-		return "This article does not exist."
-	}
-	if nr < 1 {
-		return "This article does not exist."
-	}
-	article := articlesRaw[nr-1]
-	re := regexp.MustCompile("news/galnet/\\d{4}-\\d{2}-\\d{2}")
-	link := "http://www.elitedangerous.com/"+re.FindString(article)
-	details := retrieveURL(link)
-	detailsBit := strings.Split(details, "<div class=\"widget-content alt2 galnet\">")
-	body := strings.Split(detailsBit[1], "<p><a href=\"/news/galnet/\">&laquo; GalNet Alert Service</a></p>")[0]
-	body = strings.Replace(body,"&laquo; GalNet Alert Service","",-1)
-	body = strings.Replace(body,"<blockquote>","\n\nQuote:\n\n",-1)
-	body = strings.Replace(body,"</blockquote>","\n\nEnd Quote\n\n",-1)
-	body = strings.Replace(body,"<h3>","\n",-1)
-	body = strings.Replace(body,"transmisSion","transmission",-1)
-	body = strings.Replace(body,"::","",-1)
-	re = regexp.MustCompile("<figure>.*?</figure>")
-	body = re.ReplaceAllLiteralString(body, "")
-	
-	body = removeTags( body)
-	return body	
-}
+
 
 /*
 	Utilities
@@ -154,8 +131,8 @@ func retrieveURL( url string) string {
 }
 
 func itemRequested() (int,int) {
-	item := flag.Int("item",0,"headline number for summary, negative headline number for body, 0 for a list of headlines")
-	zok := flag.Int("zok",1,"retrieve the articles from Szokorad galnetarchive instead of the official site. note that there are only headlines or full articles. no summaries! A negative number will return 100 full articles.")
+	item := flag.Int("item",0,"headline number for summary,a  negative headline number will return all full articles, 0 for a list of headlines")
+	zok := flag.Int("zok",0,"retrieve the articles from Szokorad galnetarchive instead of the official site. note that there are only headlines or full articles. no summaries! A negative number will return 100 full articles.")
 	version := flag.String("help","no","Show the version string")
 	flag.Parse()
 	if *version != "no" {
@@ -178,58 +155,36 @@ func removeTags(htm string) string  {
 
 func main() {
 	request, zok := itemRequested()
-	details := 0
 	rs := ""
+	var articles []map[string]string
 	if zok==0 {
 		rs = "GALNET News.\n"
-
-		if request < 0 {
-			request = -request
-			details = 1
-		}
-
 		htm := retrieveURL("http://www.elitedangerous.com/news/galnet/")
-
-		if request != 0 {
-			if details == 0 {
-				rs = rs+"item requested : "+strconv.Itoa(request)+"\n"
-				rs = rs+getArticle(request, htm)
-			} else {
-				rs = rs+"full content of item : "+strconv.Itoa(request)+"\n"
-				rs = rs+getDetails(request, htm)
-			}
-		} else {
-			rs = rs+"Current Headlines : \n\n"
-			headlines := getHeadlines(htm)
-			for i := 0; i < len(headlines); i++ {
-				galDate := getLinkDate(headlines[i])
-				rs = rs+"Headline "+strconv.Itoa(i+1)+".\nStardate "+galDate+".\n"+removeTags(headlines[i])+"\n"
-			}
-		}
+		articles = off_getArticles(htm)
 	} else {
-		rs = "Zsokorad Galnet News - The fastest news in the Galaxy\n\n"
+		rs = "Zsokorad Galnet Archive\n\n"
 		maxresults := "10"
 		if request < 0 {
 			maxresults = "100"
 		}
 		htm := retrieveURL("http://galnetarchive.blogspot.com/feeds/posts/default?max-results="+maxresults+"&alt=rss")
-		articles := zok_getArticles(htm)
-		if request == 0 {
-			rs = rs+"Current Headlines : \n\n"
-			for i := 0; i < len(articles); i++ {
-				rs = rs+"item "+strconv.Itoa(i+1)+":\n"+articles[i]["headline"]+"\n\n\n"
-			}
-		} else if request > 0 {
-			if request > len(articles) {
-				rs = rs+"This item does not exist"
-			} else {
-				rs = rs+articles[request-1]["headline"]+"\n\n"+articles[request-1]["body"]+"\n\n\n"
-			}
+		articles = zok_getArticles(htm)
+	}
+	if request == 0 {
+		rs = rs+"Current Headlines : \n\n"
+		for i := 0; i < len(articles); i++ {
+			rs = rs+"item "+strconv.Itoa(i+1)+":\n"+articles[i]["headline"]+"\n\n\n"
+		}
+	} else if request > 0 {
+		if request > len(articles) {
+			rs = rs+"This item does not exist"
 		} else {
-			fmt.Println(articles)
-			for i := 0; i < len(articles); i++ {
-rs=rs+"\n\n\nitem"+strconv.Itoa(i+1)+":\n"+articles[i]["headline"]+"\n\n"+articles[i]["body"]+"\n\n\n"
-			}
+			rs = rs+articles[request-1]["headline"]+"\n\n"+articles[request-1]["body"]+"\n\n\n"
+		}
+	} else {
+		fmt.Println(articles)
+		for i := 0; i < len(articles); i++ {
+			rs=rs+"\n\n\nitem"+strconv.Itoa(i+1)+":\n"+articles[i]["headline"]+"\n\n"+articles[i]["body"]+"\n\n\n"
 		}
 	}
 	rs = rs + "\nEnd of Stream.\n"
